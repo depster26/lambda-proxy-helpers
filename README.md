@@ -1,9 +1,23 @@
-# Lambda Helpers (Python)
+# Lambda Proxy Helpers
 When exploring the serverless paradigm (on AWS) I was duplicating a fair amount code and decided it was time to put it 
-in one spot so it could be shared by any serverless application. This repo contains a collection of utility/helper 
-functions that I find useful.
+in one spot so it could be shared by any serverless application I was developing. This repo contains a collection of 
+utility/helper functions that I find useful when creating API's using Proxy Integration in API Gateway.
 
-## lambda_proxy_response.py
+## Proxy Integration in API Gateway
+These helpers are specific to Proxy Integrations with API Gateway. You can find more information about proxy 
+integrations [here](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html).
+
+In summary, API Gateway acts purely as a proxy between the incoming request and the destination Lambda function. It 
+passes all the request information to the Lambda function and expects it to handle all validations. API Gateway just 
+expects the response to be in a specific format and it's the responsibility of the Lambda function to constract that.
+
+You can of course leverage API Gateway to parse incoming requests, pull out the relevant detail from the request,
+perform validations and only send the necessary data to the Lambda function but my preference (at the time of writing) 
+is not to have them so tightly coupled. I like having all the application logic in one spot to aid development and 
+testing. 
+
+## Proxy Response
+API Gateway expects the response to be in a specific format
 Helper class for managing the expected response to be returned to Lambda and ultimately API Gateway. When using API 
 Gateway proxy integration to call a Lambda function the response must be formatted like this:  
 

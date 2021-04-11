@@ -1,4 +1,7 @@
 import json
+from collections import namedtuple
+
+CognitoDetail = namedtuple('CognitoDetail', ['user_id', 'email', 'account_id'])
 
 
 def get_test_proxy_event(http_method: str = 'POST',
@@ -8,7 +11,7 @@ def get_test_proxy_event(http_method: str = 'POST',
                          path_params: dict = None,
                          query_string_params: dict = None,
                          stage_vars: dict = None,
-                         cognito_detail: dict = None) -> dict:
+                         cognito_detail: CognitoDetail = None) -> dict:
     event = {
         "resource": resource,
         "path": path,
@@ -72,20 +75,20 @@ def get_test_proxy_event(http_method: str = 'POST',
 
     if cognito_detail:
         event['requestContext']['authorizer'] = {
-                "claims": {
-                    "sub": cognito_detail.get('user_id'),
-                    "aud": "05129d90-2c2e-11eb-8a9f-6b193de7ce54",
-                    "email_verified": "true",
-                    "event_id": "f5caefea-2c2d-11eb-8a9f-6b193de7ce54",
-                    "token_use": "id",
-                    "auth_time": "1604701288",
-                    "iss": "https://cognito-idp.us-east-1.amazonaws.com/us-west-2_abcdefghijk",
-                    "cognito:username": cognito_detail.get('user_id'),
-                    "exp": "Fri Nov 06 23:21:28 UTC 2020",
-                    "iat": "Fri Nov 06 22:21:28 UTC 2020",
-                    "email": cognito_detail.get('email'),
-                    "custom:account_id": cognito_detail.get('account_id')
-                }
+            "claims": {
+                "sub": cognito_detail.user_id,
+                "aud": "1g31q8lvpfs0uqkqpravprhth5",
+                "email_verified": "true",
+                "event_id": "ac602ff9-b2fe-45f7-a06f-ced94764b043",
+                "token_use": "id",
+                "auth_time": "1604701288",
+                "iss": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_abcdef",
+                "cognito:username": cognito_detail.user_id,
+                "exp": "Fri Nov 06 23:21:28 UTC 2020",
+                "iat": "Fri Nov 06 22:21:28 UTC 2020",
+                "email": cognito_detail.email,
+                "custom:account_id": cognito_detail.account_id
             }
+        }
 
     return event
