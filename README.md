@@ -1,26 +1,57 @@
 # Lambda Proxy Helpers
-When exploring the serverless paradigm (on AWS) I was duplicating a fair amount code and decided it was time to put it 
-in one spot so it could be shared by any serverless application I was developing. This repo contains a collection of 
-utility/helper functions that I find useful when creating API's using Proxy Integration in API Gateway.
+When I first stared exploring the serverless paradigm (on AWS) I was duplicating a fair amount code and decided it 
+was high time to put it in one place so it could be shared by any serverless application I was developing. This repo 
+contains a collection of utility/helper functions that I find useful when creating API's using Proxy Integration 
+in API Gateway. Hopefully it'll help someone else.
 
 ## Proxy Integration in API Gateway
 These helpers are specific to Proxy Integrations with API Gateway. You can find more information about proxy 
 integrations [here](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html).
 
 In summary, API Gateway acts purely as a proxy between the incoming request and the destination Lambda function. It 
-passes all the request information to the Lambda function and expects it to handle all validations. API Gateway just 
-expects the response to be in a specific format and it's the responsibility of the Lambda function to constract that.
+passes all the request information to the Lambda function and expects it to handle all validations etc. API Gateway 
+just expects the response to be in a very specific format passing the responsibility of constructing it to the Lambda 
+function.
 
 You can of course leverage API Gateway to parse incoming requests, pull out the relevant detail from the request,
 perform validations and only send the necessary data to the Lambda function but my preference (at the time of writing) 
 is not to have them so tightly coupled. I like having all the application logic in one spot to aid development and 
-testing. 
+testing.
 
-## Proxy Response
-API Gateway expects the response to be in a specific format
-Helper class for managing the expected response to be returned to Lambda and ultimately API Gateway. When using API 
-Gateway proxy integration to call a Lambda function the response must be formatted like this:  
+## Event Parser
+Lambda functions accept a raw event and I wanted a single object that will abstract away all the validation 
+details for me, including any required user authentication. In the main handler object, this is the first action 
+that's taken:
 
+```python
+def some_handler(event, context):
+    ep = EventParser(event)
+    ep.validate_event_auth()
+    ...
+```
+We instantiate a new EventParser object and hand the raw even to it. The second line calls the validate_event_auth() 
+method. This will check for the existence of Cognito details in the event and will either raise an error or parse the
+details out into a user_id, account_id and account_created properties of the event parser object for quick referral 
+later on. If you you don't need user authentication simply omit the call to the validate function and move on.
+
+There are other helper methods in there for retrieving body properties, path params and question string params.
+
+### Cognito
+I use AWS Cognito to handle all user management functions (no point rolling my own) and this integrates nively with API 
+Gateway. You can tell the api that (certain) methods require an authenticator (of type Cognito) and it will inject 
+the relevant details into the event object under the "authorizer" property.
+
+```python
+authorizer = self.event['requestContext'].get('authorizer')
+claims = authorizer.get('claims')
+```
+From there we extract the claims component to get access to the currently logged in user. This is super handy as most
+applications I write require user authentication and each user is attached to an "account". The UI doesn't have to worry
+about passing the account id on requests because it's done automatically as part of the user object. All the 
+API has to do is check what's being requested is associated with the account that's in the user record.
+
+## Lambda Proxy Response
+As noted above, API Gateway expects the response to be in a specific format:
 ```json
 {
     "isBase64Encoded": false,
@@ -31,66 +62,32 @@ Gateway proxy integration to call a Lambda function the response must be formatt
     "body": "..."
 }
 ```
-This helper class handles it for you by populating with the relevant properties and calling make_response().
+The LambdaProxyResponse class is a utility class that handles all this for you.
 
-> the body of the response must be a string so the dictionary is converted as part of make_response.
+> NOTE: the body of the response must be a string so any payload objects are converted as part of make_response 
+> method call.
 
-### Handling Decimals
+### Handling Decimals (and Dates)
 One thing that comes up a lot when you have DynamoDB integration is the use of the Decimal object. As noted above the 
-body of the response must be a string and json doesn't play nice with Decimals. To get  around this the make_response() 
-function will call replace_decimals() on the body object before attempting to convert it to a string for insertion 
-into the final response.
+body of the response must be a string and json doesn't play nice with Decimals. To get around this the make_response() 
+function will call do_json_compatible_replacements() on the body object before attempting to convert it to a string 
+for insertion into the final response. This also handles DateTime objects.
 
 > I pulled this solution from a discussion of the "decimal issue" here: https://github.com/boto/boto3/issues/369 
 
 ### Body Parameters
-Within the body property of the response I include the following properties:
+Within the body property of the response we'll either include the returned value/object OR error details. The error 
+information will contain two properties:
+
 ```json
 {
-    "status": 200,
-    "message": "...",
-    "payload": "...",
     "error": "...",
     "error_type": "..."
 }
 ``` 
-- _**status**_ (always present): the same status code as set in the actual response object in case I need access to it.
-- _**message**_ (optional): sometimes I don't need a payload dictionary but just a feedback message.
-- _**payload**_ (optional): the main part of the response that includes whatever dictionary you need to send back to 
-the caller.
 - _**error**_ (optional): when an exception is raised this will contain the summary error message.
-- _**error_type**_ (optional): when an exception is raised this will contain the the error type.
-
-There are two additional parameters that get added to this response when logging is triggered:
-
-```json
-{
-    "event": "...",
-    "error_traceback": "..."
-}
-```
-- _**event**_ (optional): if I need to raise an error I can also include the incoming event object to aid debugging.
-- _**error_traceback**_ (optional): for "unhandled" exceptions this will contain the traceback.
-
-> I never want to send these two pieces of information to the function caller but they provide a lot of useful 
->information when attempting to debug errors. When logging unhandled and general exceptions I'll log the response 
->along with these by invoking make_logging_response().
-
-## lambda_proxy_response_wrapper.py
-When writing Lambda functions for use with API Gateway using the proxy integration this wrapper function handles
-the correct response format Lambda is expecting. The handler function simply needs to focus on the body of the 
-response and return a dict/string/list etc. Simply decorate the handler method as such:
-
-```python
-@lambda_proxy_response_wrapper()
-def request_handler(event, context):
-    return {"x": "Some parameter", "Y": "Some other parameter"}
-```
-
-### Error handling
-The wrapper handles any known (and unknown) errors thrown by the function. For known errors (see 
-lambda_errors.py below) it will set the correct error information in the response and return the appropriate status 
-code. For unknown errors it will do the same but also log the stack trace to aid debugging.
+- _**error_type**_ (optional): when an exception is raised this will contain the error type so the caller can check 
+  this for deciding how to handle it.
 
 ## lambda_errors.py
 Contains a set of "custom" exception classes that can be raised by the handler functions:
@@ -105,4 +102,43 @@ before attempting a delete on the parent.
 - _**InvalidFunctionRequestError**_: if the handler method is unable to determine what function to call
 - _**InvalidUserError**_: if the user cannot be found or expected user attributes are not part of the request event
 - _**GeneralError**_: alias to the base Exception object but you can include the event object for debugging
+
+
+## Function Response
+This is a simple named tuple that consists of the following properties:
+- _**status_code**_ - the http status code you wish to send back to the caller
+- _**payload**_- the actual result you want to send back to the caller
+- _**url**_ - if you created a new object and with to return a 201 status code, include the resource location of where that 
+  new resource can be found here
+
+This is the object your handler object should return when using the Lambda Proxy Wrapper.....
+
+## Lambda Proxy Response Wrapper
+This is the wrapper that pulls everything together. Simply put, if you decorate your Lambda Handler functions with this
+wrapper you only need to do one of the following in your functions:
+
+>a. return a FunctionResponse object from your handler containing the payload to return to the caller.
+
+OR
+
+>b. deliberately raise one of the defined errors
+
+The wrapper will take care of constructing the correct response and catching any unhandled errors. That's it. You can 
+now focus on the logic of the function(s) and not worry about constructing a valid response.
+
+```python
+@lambda_proxy_response_wrapper()
+def request_handler(event, context):
+    return FunctionResponse(status_code=200,
+                            payload={"x": "Some parameter", "Y": "Some other parameter"},
+                            url=None)
+```
+
+## Enhancements
+A few things I'd like to get around to handling:
+- _**integrate SNS notifications to the error handler**_ - if an unhandled error is detected an SNS message can be dispatched 
+  to a topic and all subscribers will get a nicely formatted email.
+- _**handle byte streams**_ - currently the proxy handler will not handle files/images etc. 
+
+
 

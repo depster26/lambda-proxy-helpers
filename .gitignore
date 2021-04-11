@@ -117,3 +117,5 @@ _working/
 
 # PyTest
 .pytest_cache
+
+*.drawio
