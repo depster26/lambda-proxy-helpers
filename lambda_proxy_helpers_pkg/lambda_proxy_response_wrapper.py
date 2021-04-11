@@ -22,11 +22,12 @@ FunctionResponse = namedtuple('FunctionResponse', ['status_code', 'payload', 'ur
 
 
 def handle_exception(e):
-    # TODO: dispatch SNS notification here
-
     if type(e) in KNOWN_ERRORS:
-        return e.status_code, e.message, repr(e)
+        return e.status_code, e.message, repr(e), None
     else:
+        # TODO: check for SNS notification environment vars and dispatch accordingly
+        # TODO: include traceback information in the notification
+        # traceback_info = traceback.format_exc().splitlines()
         return HttpStatusCodes.INTERNAL_SERVER_ERROR, f"An unhandled exception was raised: {e}", repr(e)
 
 
@@ -52,7 +53,6 @@ def lambda_proxy_response_wrapper():
 
             except Exception as e:
                 resp.status, resp.error, resp.error_type = handle_exception(e)
-                resp.error_traceback = traceback.format_exc().splitlines()
 
             return resp.make_response()
 
