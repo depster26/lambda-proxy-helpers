@@ -25,9 +25,9 @@ def handle_exception(e):
     # TODO: dispatch SNS notification here
 
     if type(e) in KNOWN_ERRORS:
-        return e.status_code, e.message
+        return e.status_code, e.message, repr(e)
     else:
-        return HttpStatusCodes.INTERNAL_SERVER_ERROR, f"An unhandled exception was raised: {e}"
+        return HttpStatusCodes.INTERNAL_SERVER_ERROR, f"An unhandled exception was raised: {e}", repr(e)
 
 
 def lambda_proxy_response_wrapper():
@@ -48,10 +48,10 @@ def lambda_proxy_response_wrapper():
             resp = LambdaProxyResponse()
 
             try:
-                resp.status_code, resp.payload, resp.location = func(*args, **kwargs)
+                resp.status, resp.payload, resp.location = func(*args, **kwargs)
 
             except Exception as e:
-                resp.status_code, resp.error = handle_exception(e)
+                resp.status, resp.error, resp.error_type = handle_exception(e)
                 resp.error_traceback = traceback.format_exc().splitlines()
 
             return resp.make_response()

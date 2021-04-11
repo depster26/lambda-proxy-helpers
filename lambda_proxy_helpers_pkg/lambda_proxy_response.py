@@ -42,11 +42,13 @@ class LambdaProxyResponse:
                  payload: dict = None,
                  location: str = None,
                  error=None,
+                 error_type=None,
                  error_traceback=None):
         self.payload = payload
         self.status = status
         self.error = error
         self.error_traceback = error_traceback
+        self.error_type = error_type
         self.location = location
 
     def __repr__(self):
@@ -54,6 +56,7 @@ class LambdaProxyResponse:
                f"payload={self.payload}, " \
                f"location={self.location}, " \
                f"error={self.error}, " \
+               f"error_type={self.error_type}, " \
                f"error_traceback={self.error_traceback})"
 
     def __str__(self):
@@ -81,7 +84,8 @@ class LambdaProxyResponse:
 
         if self.error:
             tmp_payload = {
-                "error": self.error
+                "error": self.error,
+                "errorType": self.error_type
             }
 
             if include_stacktrace and self.error_traceback:
@@ -94,7 +98,11 @@ class LambdaProxyResponse:
             if self.location:
                 resp['headers']['Location'] = self.location
 
-        resp["body"] = do_json_compatible_replacements(tmp_payload)
+        if tmp_payload:
+            if isinstance(tmp_payload, dict) or isinstance(tmp_payload, list):
+                resp["body"] = json.dumps(do_json_compatible_replacements(tmp_payload))
+            else:
+                resp["body"] = tmp_payload
 
         return resp
 
