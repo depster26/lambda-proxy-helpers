@@ -23,7 +23,7 @@ FunctionResponse = namedtuple('FunctionResponse', ['status_code', 'payload', 'ur
 
 def handle_exception(e):
     if type(e) in KNOWN_ERRORS:
-        return e.status_code, e.message, repr(e), None
+        return e.status_code, e.message, repr(e)
     else:
         # TODO: check for SNS notification environment vars and dispatch accordingly
         # TODO: include traceback information in the notification
