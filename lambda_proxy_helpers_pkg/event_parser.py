@@ -7,12 +7,11 @@ CUSTOM_ACCOUNT_CREATED = "custom:account_created"
 
 
 class EventParser:
-    def __init__(self, event: dict, requires_account_id: bool = False):
+    def __init__(self, event: dict):
         self.event = event
         self.user_id = None
         self.account_id = None
         self.account_created = None
-        self.requires_account_id = requires_account_id
 
         if self.event['body']:
             self.event_body = json.loads(self.event['body'])
@@ -48,7 +47,7 @@ class EventParser:
 
         return self.event['queryStringParameters'].get(param_name)
 
-    def validate_event_auth(self):
+    def validate_event_auth(self, requires_account_id: bool = False):
         """
         Extracts the user id from the Lambda event dictionary. If the environment variable
         IS_LOCAL_DEBUG is set then it will simply use the values of environment variables TEST_USER_ID,
@@ -76,9 +75,9 @@ class EventParser:
 
         self.user_id = claims.get('sub')
 
-        if self.requires_account_id:
+        if requires_account_id:
             self.account_id = claims.get(CUSTOM_ACCOUNT_ID)
             self.account_created = claims.get(CUSTOM_ACCOUNT_CREATED)
 
-        if not self.user_id or (self.requires_account_id and not self.account_id):
+        if not self.user_id or (requires_account_id and not self.account_id):
             raise InvalidUserError('User invalid or not found')

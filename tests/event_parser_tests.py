@@ -19,10 +19,10 @@ def test_user_is_none():
                                       path='/test',
                                       cognito_detail=None)
 
-    event_parser = EventParser(event=test_event, requires_account_id=True)
+    event_parser = EventParser(event=test_event)
 
     with pytest.raises(InvalidUserError) as e:
-        event_parser.validate_event_auth()
+        event_parser.validate_event_auth(requires_account_id=True)
 
     assert "User invalid" in e.value.message
 
@@ -36,10 +36,10 @@ def test_missing_user():
                                                                    email=None,
                                                                    account_id=None))
 
-    event_parser = EventParser(event=test_event, requires_account_id=True)
+    event_parser = EventParser(event=test_event)
 
     with pytest.raises(InvalidUserError) as e:
-        event_parser.validate_event_auth()
+        event_parser.validate_event_auth(requires_account_id=True)
 
     assert "User invalid" in e.value.message
 
@@ -53,10 +53,10 @@ def test_missing_account_id():
                                                                    email=None,
                                                                    account_id=None))
 
-    event_parser = EventParser(event=test_event, requires_account_id=True)
+    event_parser = EventParser(event=test_event)
 
     with pytest.raises(InvalidUserError) as e:
-        event_parser.validate_event_auth()
+        event_parser.validate_event_auth(requires_account_id=True)
 
     assert "User invalid" in e.value.message
 
