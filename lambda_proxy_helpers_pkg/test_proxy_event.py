@@ -1,7 +1,7 @@
 import json
 from collections import namedtuple
 
-CognitoDetail = namedtuple('CognitoDetail', ['user_id', 'email', 'account_id'])
+CognitoDetail = namedtuple('CognitoDetail', ['user_id', 'email', 'account_id', 'account_created'])
 
 
 def get_test_proxy_event(http_method: str = 'POST',
@@ -87,7 +87,8 @@ def get_test_proxy_event(http_method: str = 'POST',
                 "exp": "Fri Nov 06 23:21:28 UTC 2020",
                 "iat": "Fri Nov 06 22:21:28 UTC 2020",
                 "email": cognito_detail.email,
-                "custom:account_id": cognito_detail.account_id
+                "custom:account_id": cognito_detail.account_id,
+                "custom:account_created": "Y" if cognito_detail.account_created else "N"
             }
         }
 
