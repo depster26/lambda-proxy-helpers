@@ -58,10 +58,12 @@ class EventParser:
 
         :return:
         """
-        if os.environ.get("IS_LOCAL_DEBUG"):
+        is_debug = os.environ.get("IS_LOCAL_DEBUG")
+
+        if is_debug is not None and is_debug.lower() in ('true', 1, 'y', 't'):
             self.user_id = os.environ.get("TEST_USER_ID")
             self.account_id = os.environ.get("TEST_ACCOUNT_ID")
-            self.account_created = os.environ.get("TEST_ACCOUNT_CREATED")
+            self.account_created = os.environ.get("TEST_ACCOUNT_CREATED") or "N"
             return
 
         if 'requestContext' not in self.event or not self.event['requestContext'].get('authorizer'):
