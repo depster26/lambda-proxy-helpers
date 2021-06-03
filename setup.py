@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="lambda-proxy-helpers",
-    version="0.0.2",
+    version="0.0.3",
     author="Peter Deppe",
     author_email="",
     description="Package of common utility/helper functions for Lambda Poxy development",
