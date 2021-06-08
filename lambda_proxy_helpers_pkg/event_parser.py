@@ -67,13 +67,13 @@ class EventParser:
             return
 
         if 'requestContext' not in self.event or not self.event['requestContext'].get('authorizer'):
-            raise InvalidUserError('User invalid or not found')
+            raise InvalidUserError('User invalid or not found (1)')
 
         authorizer = self.event['requestContext'].get('authorizer')
         claims = authorizer.get('claims')
 
         if not claims:
-            raise InvalidUserError('User invalid or user not found')
+            raise InvalidUserError('User invalid or user not found (2)')
 
         self.user_id = claims.get('sub')
 
@@ -82,4 +82,4 @@ class EventParser:
             self.account_created = claims.get(CUSTOM_ACCOUNT_CREATED)
 
         if not self.user_id or (requires_account_id and not self.account_id):
-            raise InvalidUserError('User invalid or not found')
+            raise InvalidUserError('User invalid or not found (3)')
